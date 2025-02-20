@@ -1,0 +1,95 @@
+import 'package:absen_smkn1_punggelan/app/data/repository/attendance_repository.dart';
+import 'package:absen_smkn1_punggelan/app/data/repository/auth_repository.dart';
+import 'package:absen_smkn1_punggelan/app/data/repository/schedule_repository.dart';
+import 'package:absen_smkn1_punggelan/app/data/source/attendance_api_service.dart';
+import 'package:absen_smkn1_punggelan/app/data/source/auth_api_service.dart';
+import 'package:absen_smkn1_punggelan/app/data/source/photo_api_service.dart';
+import 'package:absen_smkn1_punggelan/app/data/source/schedule_api_service.dart';
+import 'package:absen_smkn1_punggelan/app/module/repository/attendance_repository.dart';
+import 'package:absen_smkn1_punggelan/app/module/repository/auth_repository.dart';
+import 'package:absen_smkn1_punggelan/app/module/repository/schedule_repository.dart';
+import 'package:absen_smkn1_punggelan/app/module/use_case/attendance_get_by_month_year.dart';
+import 'package:absen_smkn1_punggelan/app/module/use_case/attendance_get_this_month.dart';
+import 'package:absen_smkn1_punggelan/app/module/use_case/attendance_get_today.dart';
+import 'package:absen_smkn1_punggelan/app/module/use_case/attendance_send.dart';
+import 'package:absen_smkn1_punggelan/app/module/use_case/auth_login.dart';
+import 'package:absen_smkn1_punggelan/app/module/use_case/photo_get_bytes.dart';
+import 'package:absen_smkn1_punggelan/app/module/use_case/schedule_banned.dart';
+import 'package:absen_smkn1_punggelan/app/module/use_case/schedule_get.dart';
+import 'package:absen_smkn1_punggelan/app/presentation/detail_attendance/detail_attendance_notifier.dart';
+import 'package:absen_smkn1_punggelan/app/presentation/face_recognition/face_recognition_notifier.dart';
+import 'package:absen_smkn1_punggelan/app/presentation/home/home_notifier.dart';
+import 'package:absen_smkn1_punggelan/app/presentation/login/login_notifier.dart';
+import 'package:absen_smkn1_punggelan/app/presentation/map/map_notifier.dart';
+import 'package:absen_smkn1_punggelan/app/presentation/profile/profile_notifier.dart';
+import 'package:absen_smkn1_punggelan/core/network/app_interceptor.dart';
+import 'package:get_it/get_it.dart';
+import 'package:dio/dio.dart';
+import 'package:flutter/foundation.dart';
+import 'package:pretty_dio_logger/pretty_dio_logger.dart';
+
+final sl = GetIt.instance;
+
+Future<void> initDependency() async {
+  //dio
+  Dio dio = Dio();
+  dio.interceptors.add(AppInterceptor());
+  
+  // Hanya tambahkan logger di mode debug
+  if (!kReleaseMode) {
+    dio.interceptors.add(PrettyDioLogger(
+      requestBody: true,
+      requestHeader: true,
+      responseBody: true,
+      responseHeader: true,
+      compact: true,
+    ));
+  }
+  
+  // Error handling global
+  dio.interceptors.add(InterceptorsWrapper(
+    onError: (error, handler) async {
+      if (error.response?.statusCode == 401) {
+        // Handle unauthorized
+        await sl<AuthRepository>().logout();
+        // Redirect to login
+      }
+      return handler.next(error);
+    },
+  ));
+  
+  sl.registerSingleton<Dio>(dio);
+
+  //apiservice
+  sl.registerSingleton<AuthApiService>(AuthApiService(sl()));
+  sl.registerSingleton<AttendanceApiService>(AttendanceApiService(sl()));
+  sl.registerSingleton<ScheduleApiService>(ScheduleApiService(sl()));
+  sl.registerSingleton<PhotoApiService>(PhotoApiService(sl()));
+
+  //repositoy
+  sl.registerSingleton<AuthRepository>(AuthRepositoryImpl(sl()));
+  sl.registerSingleton<AttendanceRepository>(AttendanceRepositoryImpl(sl()));
+  sl.registerSingleton<ScheduleRepository>(ScheduleRepositoryImpl(sl()));
+  sl.registerSingleton<PhotoRepository>(PhotoRepositoryImpl(sl()));
+
+  //usecase
+  sl.registerSingleton<AuthLoginUseCase>(AuthLoginUseCase(sl()));
+  sl.registerSingleton<AttendanceGetTodayUseCase>(AttendanceGetTodayUseCase(sl()));
+  sl.registerSingleton<AttendanceGetMonthUseCase>(AttendanceGetMonthUseCase(sl()));
+  sl.registerSingleton<AttendanceSendUseCase>(AttendanceSendUseCase(sl()));
+  sl.registerSingleton<AttendanceGetByMonthYear>(AttendanceGetByMonthYear(sl()));
+  sl.registerSingleton<ScheduleGetUseCase>(ScheduleGetUseCase(sl()));
+  sl.registerSingleton<ScheduleBannedUseCase>(ScheduleBannedUseCase(sl()));
+  sl.registerSingleton<PhotoGetBytesUseCase>(PhotoGetBytesUseCase(sl()));
+
+  //provider
+  sl.registerFactory<LoginNotifier>(() => LoginNotifier(sl()));
+  sl.registerFactory<HomeNotifier>(() => HomeNotifier(sl(), sl(), sl(), sl()));
+  sl.registerFactory<MapNotifier>(() => MapNotifier(sl(), sl(), sl()));
+  sl.registerFactory<DetailAttendanceNotifier>(() => DetailAttendanceNotifier(sl()));
+  sl.registerFactory<FaceRecognitionNotifier>(() => FaceRecognitionNotifier(sl()));
+  sl.registerFactory<ProfileNotifier>(() => ProfileNotifier(
+    authRepository: sl(),
+    photoRepository: sl(),
+  ));
+}
