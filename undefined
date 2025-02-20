@@ -1,0 +1,40 @@
+import StatusBoard from '@/components/StatusBoard';
+
+const employees = [
+  {
+    id: '1',
+    name: 'John Doe',
+    status: 'Present',
+    timestamp: '9:00 AM',
+    avatarUrl: 'https://api.dicebear.com/7.x/avataaars/svg?seed=John'
+  },
+  {
+    id: '2',
+    name: 'Jane Smith',
+    status: 'Late',
+    timestamp: '9:30 AM',
+    avatarUrl: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Jane'
+  },
+  {
+    id: '3',
+    name: 'Bob Johnson',
+    status: 'Absent',
+    timestamp: '--:--',
+    avatarUrl: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Bob'
+  },
+  {
+    id: '4',
+    name: 'Alice Williams',
+    status: 'Present',
+    timestamp: '8:55 AM',
+    avatarUrl: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Alice'
+  }
+];
+
+export default function StatusBoardStory() {
+  return (
+    <div className="bg-gray-100 p-4">
+      <StatusBoard employees={employees} />
+    </div>
+  );
+}
